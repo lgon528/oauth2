@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -18,25 +19,48 @@ import (
 	"gopkg.in/oauth2.v3/store"
 )
 
+var srv *server.Server
+
 func main() {
+	log.SetFlags(log.Lshortfile | log.LstdFlags | log.Lmicroseconds)
 	manager := manage.NewDefaultManager()
 	manager.SetAuthorizeCodeTokenCfg(manage.DefaultAuthorizeCodeTokenCfg)
 
 	// token store
 	manager.MustTokenStorage(store.NewMemoryTokenStore())
 
+	// user store
+	userStore := store.NewUserStore()
+	userStore.SetUser("10000", &models.User{
+		ClientID: "10000",
+		ID:       "forrest",
+		OpenID:   generateOpenID("10000#forrest"),
+	})
+	userStore.SetUser("10000", &models.User{
+		ClientID: "10000",
+		ID:       "jason",
+		OpenID:   generateOpenID("10000#jason"),
+	})
+	userStore.SetUser("10000", &models.User{
+		ClientID: "10000",
+		ID:       "eric",
+		OpenID:   generateOpenID("10000#eric"),
+	})
+	manager.MapUserStorage(userStore)
+
 	// generate jwt access token
 	manager.MapAccessGenerate(generates.NewJWTAccessGenerate([]byte("00000000"), jwt.SigningMethodHS512))
 
 	clientStore := store.NewClientStore()
-	clientStore.Set("222222", &models.Client{
-		ID:     "222222",
-		Secret: "22222222",
+	clientStore.Set("10000", &models.Client{
+		ID:     "10000",
+		Secret: "10000",
 		Domain: "http://localhost:9094",
 	})
 	manager.MapClientStorage(clientStore)
 
-	srv := server.NewServer(server.NewConfig(), manager)
+	srv = server.NewServer(server.NewConfig(), manager)
+	srv.SetClientInfoHandler(server.ClientFormHandler)
 
 	srv.SetPasswordAuthorizationHandler(func(username, password string) (userID string, err error) {
 		if username == "test" && password == "test" {
@@ -45,7 +69,7 @@ func main() {
 		return
 	})
 
-	srv.SetUserAuthorizationHandler(userAuthorizeHandler)
+	srv.SetUserAuthorizationHandler(userAuthorizeHandler2)
 
 	srv.SetInternalErrorHandler(func(err error) (re *errors.Response) {
 		log.Println("Internal Error:", err.Error())
@@ -56,10 +80,11 @@ func main() {
 		log.Println("Response Error:", re.Error.Error())
 	})
 
-	http.HandleFunc("/login", loginHandler)
-	http.HandleFunc("/auth", authHandler)
+	http.HandleFunc("/oauth2/test/login", loginHandler)
+	http.HandleFunc("/oauth2/test/auth", authHandler)
 
-	http.HandleFunc("/authorize", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/oauth2/test/authorize", func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("we're here, %v", r)
 		store, err := session.Start(nil, w, r)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -81,14 +106,29 @@ func main() {
 		}
 	})
 
-	http.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/oauth2/test/access_token", func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("we're here %v", r)
+		err := srv.HandleTokenRequest(w, r)
+		if err != nil {
+			log.Printf("we're here, err %v", err)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"error_code": -1,
+				"error_msg":  err.Error,
+			})
+			// http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	})
+
+	http.HandleFunc("/oauth2/test/refresh_token", func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("we're here, %v", r)
+
 		err := srv.HandleTokenRequest(w, r)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	})
 
-	http.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/oauth2/test/test", func(w http.ResponseWriter, r *http.Request) {
 		token, err := srv.ValidationBearerToken(r)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -109,6 +149,16 @@ func main() {
 	log.Fatal(http.ListenAndServe(":9096", nil))
 }
 
+func generateOpenID(src string) string {
+	icode := make([]byte, len(src))
+
+	for i, c := range []byte(src) {
+		icode[i] = c + 250
+	}
+
+	return base64.StdEncoding.EncodeToString(icode)
+}
+
 func userAuthorizeHandler(w http.ResponseWriter, r *http.Request) (userID string, err error) {
 	store, err := session.Start(nil, w, r)
 	if err != nil {
@@ -124,7 +174,7 @@ func userAuthorizeHandler(w http.ResponseWriter, r *http.Request) (userID string
 		store.Set("ReturnUri", r.Form)
 		store.Save()
 
-		w.Header().Set("Location", "/login")
+		w.Header().Set("Location", "/oauth2/test/login")
 		w.WriteHeader(http.StatusFound)
 		return
 	}
@@ -135,7 +185,49 @@ func userAuthorizeHandler(w http.ResponseWriter, r *http.Request) (userID string
 	return
 }
 
+func userAuthorizeHandler2(w http.ResponseWriter, r *http.Request) (userID string, err error) {
+
+	if platform := r.FormValue("platform"); platform == "" || platform == "web" {
+		store, e := session.Start(nil, w, r)
+		if e != nil {
+			err = e
+			return
+		}
+
+		_, ok := store.Get("LoggedInUserID")
+		if !ok {
+			if r.Form == nil {
+				r.ParseForm()
+			}
+
+			store.Set("ReturnUri", r.Form)
+			store.Save()
+
+			w.Header().Set("Location", "/oauth2/test/login")
+			w.WriteHeader(http.StatusFound)
+			return
+		}
+
+		store.Delete("LoggedInUserID")
+		store.Save()
+	}
+
+	user, err := srv.Manager.GetUser(r.FormValue("client_id"), r.FormValue("userid"))
+	if err != nil {
+		// json.NewEncoder(w).Encode(map[string]interface{}{
+		// 	"error_code": -1,
+		// 	"error_msg":  "user not logged in",
+		// }
+		return
+	}
+
+	userID = user.GetOpenID()
+
+	return
+}
+
 func loginHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("we're here, loginHandler")
 	store, err := session.Start(nil, w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -146,7 +238,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		store.Set("LoggedInUserID", "000000")
 		store.Save()
 
-		w.Header().Set("Location", "/auth")
+		w.Header().Set("Location", "/oauth2/test/auth")
 		w.WriteHeader(http.StatusFound)
 		return
 	}
@@ -161,7 +253,7 @@ func authHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if _, ok := store.Get("LoggedInUserID"); !ok {
-		w.Header().Set("Location", "/login")
+		w.Header().Set("Location", "/oauth2/test/login")
 		w.WriteHeader(http.StatusFound)
 		return
 	}

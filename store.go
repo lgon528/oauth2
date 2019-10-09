@@ -30,4 +30,16 @@ type (
 		// use the refresh token for token information data
 		GetByRefresh(refresh string) (TokenInfo, error)
 	}
+
+	// UserStore the user information storage interface
+	UserStore interface {
+		// GetUser find user by clientID and userid
+		GetUser(clientID string, userid string) (UserInfo, error)
+
+		// GetUserByOpenID find user by openid
+		GetUserByOpenID(clientID string, openid string) (UserInfo, error)
+
+		// SetUser set user information
+		SetUser(clientID string, userinfo UserInfo) error
+	}
 )

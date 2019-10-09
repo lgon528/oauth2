@@ -19,13 +19,13 @@ const (
 
 var (
 	config = oauth2.Config{
-		ClientID:     "222222",
-		ClientSecret: "22222222",
+		ClientID:     "10000",
+		ClientSecret: "10000",
 		Scopes:       []string{"all"},
 		RedirectURL:  "http://localhost:9094/oauth2",
 		Endpoint: oauth2.Endpoint{
-			AuthURL:  authServerURL + "/authorize",
-			TokenURL: authServerURL + "/token",
+			AuthURL:  authServerURL + "/oauth2/test/authorize",
+			TokenURL: authServerURL + "/oauth2/test/access_token",
 		},
 	}
 	globalToken *oauth2.Token // Non-concurrent security
@@ -33,7 +33,10 @@ var (
 
 func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("we're here, r %v", r)
 		u := config.AuthCodeURL("xyz")
+		u = u + "&userid=forrest"
+		log.Printf("we're here, url: %s", u)
 		http.Redirect(w, r, u, http.StatusFound)
 	})
 
@@ -50,6 +53,7 @@ func main() {
 			return
 		}
 		token, err := config.Exchange(context.Background(), code)
+		log.Printf("we're here, token %v", token)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

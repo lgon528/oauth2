@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -92,6 +93,8 @@ func (s *Server) token(w http.ResponseWriter, data map[string]interface{}, heade
 		w.Header().Set(key, header.Get(key))
 	}
 
+	log.Printf("we're here, header %v, reponsewriter %v", header, w)
+
 	status := http.StatusOK
 	if len(statusCode) > 0 && statusCode[0] > 0 {
 		status = statusCode[0]
@@ -99,6 +102,7 @@ func (s *Server) token(w http.ResponseWriter, data map[string]interface{}, heade
 
 	w.WriteHeader(status)
 	err = json.NewEncoder(w).Encode(data)
+	log.Printf("we're here, data %v", data)
 	return
 }
 
@@ -236,7 +240,16 @@ func (s *Server) GetAuthorizeData(rt oauth2.ResponseType, ti oauth2.TokenInfo) (
 func (s *Server) HandleAuthorizeRequest(w http.ResponseWriter, r *http.Request) (err error) {
 	req, verr := s.ValidationAuthorizeRequest(r)
 	if verr != nil {
-		err = s.redirectError(w, req, verr)
+		if platform := r.FormValue("platform"); platform != "" && platform != "web" {
+			rsp := map[string]interface{}{
+				"error_code": -1,
+				"error_msg":  verr.Error(),
+			}
+			json.NewEncoder(w).Encode(rsp)
+		} else {
+			log.Printf("we're here")
+			err = s.redirectError(w, req, verr)
+		}
 		return
 	}
 
@@ -244,7 +257,16 @@ func (s *Server) HandleAuthorizeRequest(w http.ResponseWriter, r *http.Request) 
 	userID, verr := s.UserAuthorizationHandler(w, r)
 
 	if verr != nil {
-		err = s.redirectError(w, req, verr)
+		if platform := r.FormValue("platform"); platform != "" && platform != "web" {
+			rsp := map[string]interface{}{
+				"error_code": -1,
+				"error_msg":  verr.Error(),
+			}
+			json.NewEncoder(w).Encode(rsp)
+		} else {
+			log.Printf("we're here")
+			err = s.redirectError(w, req, verr)
+		}
 		return
 	} else if userID == "" {
 		return
@@ -277,7 +299,16 @@ func (s *Server) HandleAuthorizeRequest(w http.ResponseWriter, r *http.Request) 
 
 	ti, verr := s.GetAuthorizeToken(req)
 	if verr != nil {
-		err = s.redirectError(w, req, verr)
+		if platform := r.FormValue("platform"); platform != "" && platform != "web" {
+			rsp := map[string]interface{}{
+				"error_code": -1,
+				"error_msg":  verr.Error(),
+			}
+			json.NewEncoder(w).Encode(rsp)
+		} else {
+			log.Printf("we're here")
+			err = s.redirectError(w, req, verr)
+		}
 		return
 	}
 
@@ -291,17 +322,35 @@ func (s *Server) HandleAuthorizeRequest(w http.ResponseWriter, r *http.Request) 
 		req.RedirectURI = client.GetDomain()
 	}
 
-	err = s.redirect(w, req, s.GetAuthorizeData(req.ResponseType, ti))
+	if platform := r.FormValue("platform"); platform != "" && platform != "web" {
+		body := make(map[string]interface{})
+		body["error_code"] = 0
+		body["error_msg"] = "ok"
+		data := s.GetAuthorizeData(req.ResponseType, ti)
+		for k, v := range data {
+			body[k] = v
+		}
+		if state := r.FormValue("state"); state != "" {
+			body["state"] = state
+		}
+
+		json.NewEncoder(w).Encode(body)
+	} else {
+		err = s.redirect(w, req, s.GetAuthorizeData(req.ResponseType, ti))
+	}
+
 	return
 }
 
 // ValidationTokenRequest the token request validation
 func (s *Server) ValidationTokenRequest(r *http.Request) (gt oauth2.GrantType, tgr *oauth2.TokenGenerateRequest, err error) {
+	log.Printf("we're here")
 	if v := r.Method; !(v == "POST" ||
 		(s.Config.AllowGetAccessRequest && v == "GET")) {
 		err = errors.ErrInvalidRequest
 		return
 	}
+	log.Printf("we're here")
 
 	gt = oauth2.GrantType(r.FormValue("grant_type"))
 
@@ -310,7 +359,24 @@ func (s *Server) ValidationTokenRequest(r *http.Request) (gt oauth2.GrantType, t
 		return
 	}
 
-	clientID, clientSecret, err := s.ClientInfoHandler(r)
+	var clientID, clientSecret string
+	if gt == oauth2.Refreshing {
+		clientID = r.FormValue("client_id")
+		if clientID == "" {
+			err = fmt.Errorf("Invalid client_id")
+		} else {
+			cli, er := s.Manager.GetClient(clientID)
+			if er != nil {
+				err = er
+			} else {
+				clientSecret = cli.GetSecret()
+			}
+		}
+	} else {
+		clientID, clientSecret, err = s.ClientInfoHandler(r)
+	}
+
+	log.Printf("we're here, cid %s, csecret %s, err %v", clientID, clientSecret, err)
 	if err != nil {
 		return
 	}
@@ -460,10 +526,14 @@ func (s *Server) GetAccessToken(gt oauth2.GrantType, tgr *oauth2.TokenGenerateRe
 
 // GetTokenData token data
 func (s *Server) GetTokenData(ti oauth2.TokenInfo) (data map[string]interface{}) {
+	log.Printf("we're here, token %v", ti)
 	data = map[string]interface{}{
+		"error_code":   0,
+		"error_msg":    "ok",
 		"access_token": ti.GetAccess(),
 		"token_type":   s.Config.TokenType,
 		"expires_in":   int64(ti.GetAccessExpiresIn() / time.Second),
+		"openid":       ti.GetUserID(),
 	}
 
 	if scope := ti.GetScope(); scope != "" {
@@ -483,8 +553,38 @@ func (s *Server) GetTokenData(ti oauth2.TokenInfo) (data map[string]interface{})
 			data[k] = v
 		}
 	}
+
+	log.Printf("we're here, data: %v", data)
 	return
 }
+
+// // GetTokenData token data
+// func (s *Server) GetTokenData(ti oauth2.TokenInfo) (data map[string]interface{}) {
+// 	data = map[string]interface{}{
+// 		"access_token": ti.GetAccess(),
+// 		"token_type":   s.Config.TokenType,
+// 		"expires_in":   int64(ti.GetAccessExpiresIn() / time.Second),
+// 	}
+
+// 	if scope := ti.GetScope(); scope != "" {
+// 		data["scope"] = scope
+// 	}
+
+// 	if refresh := ti.GetRefresh(); refresh != "" {
+// 		data["refresh_token"] = refresh
+// 	}
+
+// 	if fn := s.ExtensionFieldsHandler; fn != nil {
+// 		ext := fn(ti)
+// 		for k, v := range ext {
+// 			if _, ok := data[k]; ok {
+// 				continue
+// 			}
+// 			data[k] = v
+// 		}
+// 	}
+// 	return
+// }
 
 // HandleTokenRequest token request handling
 func (s *Server) HandleTokenRequest(w http.ResponseWriter, r *http.Request) (err error) {
@@ -512,6 +612,7 @@ func (s *Server) GetErrorData(err error) (data map[string]interface{}, statusCod
 		re.Error = err
 		re.Description = v
 		re.StatusCode = errors.StatusCodes[err]
+		re.ErrorCode = -1
 	} else {
 		if fn := s.InternalErrorHandler; fn != nil {
 			if vre := fn(err); vre != nil {
@@ -536,21 +637,21 @@ func (s *Server) GetErrorData(err error) (data map[string]interface{}, statusCod
 
 	data = make(map[string]interface{})
 
-	if err := re.Error; err != nil {
-		data["error"] = err.Error()
-	}
+	// if err := re.Error; err != nil {
+	// 	data["error"] = err.Error()
+	// }
 
 	if v := re.ErrorCode; v != 0 {
 		data["error_code"] = v
 	}
 
 	if v := re.Description; v != "" {
-		data["error_description"] = v
+		data["error_msg"] = v
 	}
 
-	if v := re.URI; v != "" {
-		data["error_uri"] = v
-	}
+	// if v := re.URI; v != "" {
+	// 	data["error_uri"] = v
+	// }
 
 	header = re.Header
 

@@ -1,6 +1,7 @@
 package manage
 
 import (
+	"log"
 	"time"
 
 	"gopkg.in/oauth2.v3"
@@ -37,6 +38,7 @@ type Manager struct {
 	accessGenerate    oauth2.AccessGenerate
 	tokenStore        oauth2.TokenStore
 	clientStore       oauth2.ClientStore
+	userStore         oauth2.UserStore
 }
 
 // get grant type config
@@ -128,14 +130,34 @@ func (m *Manager) MustTokenStorage(stor oauth2.TokenStore, err error) {
 	m.tokenStore = stor
 }
 
+// MapUserStorage mapping the user store interface
+func (m *Manager) MapUserStorage(stor oauth2.UserStore) {
+	m.userStore = stor
+}
+
+// MustUserStorage mapping the user store interface
+func (m *Manager) MustUserStorage(stor oauth2.UserStore, err error) {
+	if err != nil {
+		panic(err)
+	}
+	m.userStore = stor
+}
+
 // GetClient get the client information
 func (m *Manager) GetClient(clientID string) (cli oauth2.ClientInfo, err error) {
+	log.Printf("we're here, clientID %s", clientID)
 	cli, err = m.clientStore.GetByID(clientID)
 	if err != nil {
 		return
 	} else if cli == nil {
 		err = errors.ErrInvalidClient
 	}
+	return
+}
+
+// GetUser get the user information
+func (m *Manager) GetUser(clientID string, userid string) (user oauth2.UserInfo, err error) {
+	user, err = m.userStore.GetUser(clientID, userid)
 	return
 }
 
@@ -266,6 +288,7 @@ func (m *Manager) GenerateAccessToken(gt oauth2.GrantType, tgr *oauth2.TokenGene
 	if err != nil {
 		return
 	} else if tgr.ClientSecret != cli.GetSecret() {
+		log.Printf("we're here, manager.go:291, tgr.ClientSecret %s, cli.Secret %s", tgr.ClientSecret, cli.GetSecret())
 		err = errors.ErrInvalidClient
 		return
 	} else if tgr.RedirectURI != "" {

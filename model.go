@@ -47,4 +47,16 @@ type (
 		GetRefreshExpiresIn() time.Duration
 		SetRefreshExpiresIn(time.Duration)
 	}
+
+	// UserInfo the user information model interface
+	UserInfo interface {
+		GetID() string
+		SetID(string)
+		GetPassword() string
+		SetPassword(string)
+		GetOpenID() string
+		SetOpenID(string)
+		GetClientID() string
+		SetClientID(string)
+	}
 )
