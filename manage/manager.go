@@ -156,8 +156,8 @@ func (m *Manager) GetClient(clientID string) (cli oauth2.ClientInfo, err error) 
 }
 
 // GetUser get the user information
-func (m *Manager) GetUser(clientID string, userid string) (user oauth2.UserInfo, err error) {
-	user, err = m.userStore.GetUser(clientID, userid)
+func (m *Manager) GetUser(userid string) (user oauth2.UserInfo, err error) {
+	user, err = m.userStore.GetUser(userid)
 	return
 }
 

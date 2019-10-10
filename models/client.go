@@ -1,11 +1,18 @@
 package models
 
+import (
+	"gopkg.in/oauth2.v3"
+	"sync"
+)
+
 // Client client model
 type Client struct {
 	ID     string
 	Secret string
 	Domain string
-	UserID string
+
+	mutex sync.RWMutex
+	Users map[string]oauth2.OpenUserInfo
 }
 
 // GetID client id
@@ -23,7 +30,30 @@ func (c *Client) GetDomain() string {
 	return c.Domain
 }
 
-// GetUserID user id
-func (c *Client) GetUserID() string {
-	return c.UserID
+// GetOpenUser get user info
+func (c *Client) GetOpenUser(userid string) (user oauth2.OpenUserInfo, ok bool) {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+
+	if c.Users == nil {
+		c.Users = make(map[string]oauth2.OpenUserInfo)
+		ok = false
+		return
+	}
+
+	user, ok = c.Users[userid]
+
+	return
+}
+
+func (c *Client) SetOpenUser(user oauth2.OpenUserInfo) (err error) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	if c.Users == nil {
+		c.Users = make(map[string]oauth2.OpenUserInfo)
+	}
+
+	c.Users[user.(oauth2.UserInfo).GetID()] = user
+	return
 }

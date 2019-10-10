@@ -10,7 +10,8 @@ type (
 		GetID() string
 		GetSecret() string
 		GetDomain() string
-		GetUserID() string
+		GetOpenUser(string) (OpenUserInfo, bool)
+		SetOpenUser(OpenUserInfo) error
 	}
 
 	// TokenInfo the token information model interface
@@ -54,6 +55,10 @@ type (
 		SetID(string)
 		GetPassword() string
 		SetPassword(string)
+	}
+
+	// OpenUserInfo the open user information model interface
+	OpenUserInfo interface {
 		GetOpenID() string
 		SetOpenID(string)
 		GetClientID() string

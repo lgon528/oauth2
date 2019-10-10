@@ -16,6 +16,7 @@
       <div class="jumbotron">
         <form action="/oauth2/test/authorize" method="POST">
           <h1>Authorize</h1>
+          <p> hello, {{ .username }}</p>
           <p>The client would like to perform actions on your behalf.</p>
           <p>
             <button
@@ -26,6 +27,7 @@
               Allow
             </button>
           </p>
+          <p> {{ .hint }}</p>
         </form>
       </div>
     </div>

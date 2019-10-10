@@ -1,11 +1,9 @@
 package models
 
-// User client model
+// User user model
 type User struct {
 	ID       string
 	Password string
-	OpenID   string
-	ClientID string
 }
 
 // GetID user id
@@ -28,22 +26,29 @@ func (u *User) SetPassword(pwd string) {
 	u.Password = pwd
 }
 
+// OpenUser open user model
+type OpenUser struct {
+	User
+	OpenID   string
+	ClientID string
+}
+
 // GetOpenID user open id
-func (u *User) GetOpenID() string {
+func (u *OpenUser) GetOpenID() string {
 	return u.OpenID
 }
 
 // SetOpenID user open id
-func (u *User) SetOpenID(openid string) {
+func (u *OpenUser) SetOpenID(openid string) {
 	u.OpenID = openid
 }
 
 // GetClientID client id
-func (u *User) GetClientID() string {
+func (u *OpenUser) GetClientID() string {
 	return u.ClientID
 }
 
 // SetClientID user client id
-func (u *User) SetClientID(clientID string) {
+func (u *OpenUser) SetClientID(clientID string) {
 	u.ClientID = clientID
 }

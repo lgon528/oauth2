@@ -34,12 +34,9 @@ type (
 	// UserStore the user information storage interface
 	UserStore interface {
 		// GetUser find user by clientID and userid
-		GetUser(clientID string, userid string) (UserInfo, error)
-
-		// GetUserByOpenID find user by openid
-		GetUserByOpenID(clientID string, openid string) (UserInfo, error)
+		GetUser(userid string) (UserInfo, error)
 
 		// SetUser set user information
-		SetUser(clientID string, userinfo UserInfo) error
+		SetUser(userinfo UserInfo) error
 	}
 )
