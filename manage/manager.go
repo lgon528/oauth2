@@ -1,6 +1,7 @@
 package manage
 
 import (
+	"fmt"
 	"log"
 	"time"
 
@@ -39,6 +40,30 @@ type Manager struct {
 	tokenStore        oauth2.TokenStore
 	clientStore       oauth2.ClientStore
 	userStore         oauth2.UserStore
+}
+
+// RegisterClient register client
+func (m *Manager) RegisterClient(cli oauth2.ClientInfo) error {
+	return m.clientStore.AddClient(cli)
+}
+
+// GetClients get all clients
+func (m *Manager) GetClients() []oauth2.ClientInfo {
+	return m.clientStore.GetClients()
+}
+
+// AddUser add user
+func (m *Manager) RegisterUser(user oauth2.UserInfo) error {
+	if _, err := m.userStore.GetUser(user.GetID()); err == nil {
+		return fmt.Errorf("user %s already existed", user.GetID())
+	}
+
+	return m.userStore.SetUser(user)
+}
+
+// GetUsers get all users
+func (m *Manager) GetUsers() []oauth2.UserInfo {
+	return m.userStore.GetUsers()
 }
 
 // get grant type config

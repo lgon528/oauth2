@@ -25,8 +25,10 @@ func main() {
 	test := httpSvr.Group("/oauth2/test")
 	{
 		// web server
+		test.Any("/register", web.RegisterHandler)
 		test.Any("/login", web.LoginHandler)
 		test.GET("/auth", web.AuthHandler)
+		test.Any("/client-register", web.ClientRegisterHandler)
 
 		// rest api
 		test.Any("/authorize", services.AuthorizeCodeHandler)

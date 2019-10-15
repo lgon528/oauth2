@@ -5,6 +5,12 @@ type (
 	ClientStore interface {
 		// according to the ID for the client information
 		GetByID(id string) (ClientInfo, error)
+
+		// GetClients get all clients
+		GetClients() []ClientInfo
+
+		// AddClient add a client
+		AddClient(info ClientInfo) error
 	}
 
 	// TokenStore the token information storage interface
@@ -35,6 +41,9 @@ type (
 	UserStore interface {
 		// GetUser find user by clientID and userid
 		GetUser(userid string) (UserInfo, error)
+
+		// GetUsers get all user
+		GetUsers() []UserInfo
 
 		// SetUser set user information
 		SetUser(userinfo UserInfo) error

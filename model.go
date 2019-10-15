@@ -8,7 +8,10 @@ type (
 	// ClientInfo the client information model interface
 	ClientInfo interface {
 		GetID() string
+		SetID(string)
 		GetSecret() string
+		SetSecret(string)
+		GetName() string
 		GetDomain() string
 		GetOpenUser(string) (OpenUserInfo, bool)
 		SetOpenUser(OpenUserInfo) error

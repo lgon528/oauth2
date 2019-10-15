@@ -53,8 +53,8 @@ func Init() {
 			},
 		}
 
-		for _, user := range users {
-			err := userStore.SetUser(&user)
+		for i, _ := range users {
+			err := userStore.SetUser(&users[i])
 			if err != nil {
 				// todo what to do with err
 			}
@@ -65,9 +65,9 @@ func Init() {
 		clientStore := store.NewClientStore()
 
 		client := models.Client{
-			ID:     "10000",
-			Secret: "10000",
-			Domain: "http://localhost:9094",
+			Name:        "Saas",
+			Description: "Saas demo",
+			Domain:      "http://localhost:9094",
 		}
 
 		for _, user := range users {
@@ -81,7 +81,7 @@ func Init() {
 				// todo what to do with err
 			}
 		}
-		err := clientStore.Set(client.GetID(), &client)
+		err := clientStore.AddClient(&client)
 		if err != nil {
 			// todo what to do with err
 		}

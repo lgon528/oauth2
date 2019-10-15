@@ -35,6 +35,19 @@ func (us *MemoryUserStore) GetUser(userid string) (userinfo oauth2.UserInfo, err
 	return
 }
 
+// GetUser find user by userid
+func (us *MemoryUserStore) GetUsers() []oauth2.UserInfo {
+	us.RLock()
+	defer us.RUnlock()
+
+	users := make([]oauth2.UserInfo, 0)
+	for _, u := range us.data {
+		users = append(users, u)
+	}
+
+	return users
+}
+
 // SetUser set user information
 func (us *MemoryUserStore) SetUser(userinfo oauth2.UserInfo) (err error) {
 	us.Lock()

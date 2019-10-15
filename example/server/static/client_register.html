@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Client Register</title>
+
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+    <script src="//code.jquery.com/jquery-2.2.4.min.js"></script>
+    <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Client Register</h1>
+        <form action="/oauth2/test/client-register" method="POST">
+            <div class="form-group">
+                <label for="clientname">ClientName</label>
+                <input type="text" class="form-control" name="client_name" placeholder="Please enter your client name">
+            </div>
+            <div class="form-group">
+                <label for="description">Description</label>
+                <input type="text" class="form-control" name="description" placeholder="Please enter your client name">
+            </div>
+            <div class="form-group">
+                <label for="returnuri">RedirectURI</label>
+                <input type="text" class="form-control" name="redirect_uri" placeholder="Please enter your ReturnURI">
+            </div>
+            <button type="submit" class="btn btn-success">Register</button>
+        </form>
+        <div>{{ .hint }}</div>
+        <h2>Client List</h2>
+        <pre>
+            <table>
+                <tr>
+                    <th style="width:80px">ID</th>
+                    <th style="width:300px">Secret</th>
+                    <th style="width:300px">RedirectURI</th>
+                    <th style="width:120px">Name</th>
+                    <th style="width:150px">Description</th>
+                </tr>
+
+                {{ range .clients }}
+                    <tr>
+                        <td>{{.ID}}</td>
+                        <td>{{.Secret}}</td>
+                        <td>{{.Domain}}</td>
+                        <td>{{.Name}}</td>
+                        <td>{{.Description}}</td>
+                    </tr>
+                {{ end }}
+            </table>
+        </pre>
+    </div>
+</body>
+</html>

@@ -7,12 +7,26 @@ import (
 
 // Client client model
 type Client struct {
-	ID     string
-	Secret string
-	Domain string
+	ID          string
+	Secret      string
+	Domain      string
+	Name        string
+	Description string
 
 	mutex sync.RWMutex
 	Users map[string]oauth2.OpenUserInfo
+}
+
+func (c *Client) SetID(id string) {
+	c.ID = id
+}
+
+func (c *Client) SetSecret(secret string) {
+	c.Secret = secret
+}
+
+func (c *Client) GetName() string {
+	return c.Name
 }
 
 // GetID client id

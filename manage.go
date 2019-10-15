@@ -23,8 +23,20 @@ type Manager interface {
 	// get the client information
 	GetClient(clientID string) (cli ClientInfo, err error)
 
-	// get the user information
+	// GetClients get all client
+	GetClients() []ClientInfo
+
+	// RegisterClient register client
+	RegisterClient(cli ClientInfo) error
+
+	// GetUser get the user information
 	GetUser(userid string) (user UserInfo, err error)
+
+	// RegisterUser add user
+	RegisterUser(user UserInfo) error
+
+	// GetUsers get all user
+	GetUsers() []UserInfo
 
 	// generate the authorization token(code)
 	GenerateAuthToken(rt ResponseType, tgr *TokenGenerateRequest) (authToken TokenInfo, err error)
